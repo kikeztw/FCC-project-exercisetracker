@@ -41,6 +41,18 @@ app.post('/api/users', async (req, res) => {
   }
 })
 
+app.get('/api/users', async (req, res) => {
+  try {
+    const response = await User.find();
+    console.log(response);
+    res.json(response);
+  } catch (error) {
+    res.json({
+      error: JSON.stringify(error),
+    })
+  }
+})  
+
 
 app.get('/', (req, res) => {
   res.sendFile(__dirname + '/views/index.html')
