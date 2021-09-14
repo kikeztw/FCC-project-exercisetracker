@@ -12,12 +12,25 @@ const db = mongoose.connection;
 
 db.on('error', console.error.bind(console, 'MongoDB connection error:'));
 
-
 const userSchema = new Schema({
   username: { type: String, required: true }
 });
 
+const exercisesSchema = new Schema({
+  _id : { type : String, required : true },
+  username: { type: String, required: true },
+  description: { type: String, required: true },
+  duration: { type: Number, required: true },
+  date: { type: Date },
+});
+
+exercisesSchema.virtual('id').get(function() {
+  return this._id;
+});
+
+
 const User = mongoose.model('User', userSchema);
+const Exercises = mongoose.model('Exercises', exercisesSchema);
 
 app.use(bodyParser.urlencoded({ extended: "false" }));
 app.use(bodyParser.json());
@@ -53,14 +66,34 @@ app.get('/api/users', async (req, res) => {
   }
 })  
 
+app.post('/api/users/:_id/exercises', async (req, res) => {
+  const { _id } = req.params;
+  const { description, duration, date } = req.body;
+  const _date = date || new Date().toDateString();
+
+  const newExercises = new Exercises({
+    _id,
+    description,
+    duration,
+    date: _date,
+    username: 'test'
+  })
+
+  try {
+    const response = await newExercises.save();
+    console.log(response);
+    res.json(response);
+  } catch (error) {
+    res.json({
+      error: JSON.stringify(error),
+    })
+  }
+})  
+
 
 app.get('/', (req, res) => {
   res.sendFile(__dirname + '/views/index.html')
 });
-
-
-
-
 
 const listener = app.listen(process.env.PORT || 3000, () => {
   console.log('Your app is listening on port ' + listener.address().port)
