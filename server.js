@@ -13,21 +13,16 @@ const db = mongoose.connection;
 db.on('error', console.error.bind(console, 'MongoDB connection error:'));
 
 const userSchema = new Schema({
-  username: { type: String, required: true }
+  username: { type: String, required: true },
+  logs: [{ type: Schema.Types.ObjectId, ref: 'Exercises' }],
 });
 
 const exercisesSchema = new Schema({
-  _id : { type : String, required : true },
-  username: { type: String, required: true },
+  user: [{ type: Schema.Types.ObjectId, ref: 'User' }],
   description: { type: String, required: true },
   duration: { type: Number, required: true },
   date: { type: Date },
 });
-
-exercisesSchema.virtual('id').get(function() {
-  return this._id;
-});
-
 
 const User = mongoose.model('User', userSchema);
 const Exercises = mongoose.model('Exercises', exercisesSchema);
@@ -71,28 +66,65 @@ app.post('/api/users/:_id/exercises', async (req, res) => {
   const { description, duration, date } = req.body;
   const _date = date || new Date().toDateString();
 
+  if(!_id){
+   throw new Error('user id no found.');
+  }
+
+  let user = await User.findById(_id).exec();
+
   const newExercises = new Exercises({
-    _id,
     description,
     duration,
     date: _date,
-    username: 'test'
+    user: user.id,
   })
 
-  try {
-    const response = await newExercises.save();
-    console.log(response);
-    res.json(response);
-  } catch (error) {
-    res.json({
-      error: JSON.stringify(error),
-    })
+  await newExercises.save();
+
+  const logs = user.logs || [];
+  user.logs = [...logs, newExercises._id];
+
+  await user.save();
+  
+  res.json({
+    description,
+    duration,
+    date: _date,
+    username: user.username,
+    _id: user.id,
+  });
+}) 
+
+
+
+app.get('/api/users/:_id/logs', async (req, res) => {
+  const { _id } = req.params;
+
+  const user = await User.findById(_id).populate('logs', 'description duration date -_id').exec();
+
+  const data = {
+    _id: user._id,
+    username: user.username,
+    count: user.logs?.length || 0,
+    logs: user.logs,
   }
+
+  res.json(data)
+
 })  
 
 
 app.get('/', (req, res) => {
   res.sendFile(__dirname + '/views/index.html')
+});
+
+app.use((error, req, res, next) => {
+  res.status(error.status || 500).send({
+    error: {
+      status: error.status || 500,
+      message: error.message || 'Internal Server Error',
+    },
+  });
 });
 
 const listener = app.listen(process.env.PORT || 3000, () => {
