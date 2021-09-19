@@ -64,7 +64,7 @@ app.get('/api/users', async (req, res) => {
 app.post('/api/users/:_id/exercises', async (req, res) => {
   const { _id } = req.params;
   const { description, duration, date } = req.body;
-  const _date = date || new Date().toDateString();
+  const _date = new Date(date).toDateString();
 
   if(!_id){
    throw new Error('user id no found.');
@@ -98,19 +98,48 @@ app.post('/api/users/:_id/exercises', async (req, res) => {
 
 
 app.get('/api/users/:_id/logs', async (req, res) => {
+  const { limit, from, to } = req.query;
   const { _id } = req.params;
 
-  const user = await User.findById(_id).populate('logs', 'description duration date -_id').exec();
+  let options = {}
+
+  if(limit){
+    options = {
+      limit: Number(limit), 
+    }
+  }
+  
+  console.log(options);
+
+  const user = await User.findById(_id).exec();
+
+  const find = {
+    user: user.id,
+  }
+
+  if(from && to){
+    Object.assign(find, {
+      date:{
+        $gte: new Date(from),
+        $lte: new Date(to),
+      }
+    })
+  }
+
+  const logs = await Exercises.find(
+    find, 
+    null, 
+    options
+  ).select('description date duration -_id').exec();
 
   const data = {
     _id: user._id,
     username: user.username,
-    count: user.logs?.length || 0,
-    logs: user.logs,
+    count: 0,
+    logs
   }
 
   res.json(data)
-
 })  
 
 
