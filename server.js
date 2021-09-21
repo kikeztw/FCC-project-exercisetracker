@@ -60,7 +60,7 @@ app.get('/api/users', async (req, res, next) => {
 app.post('/api/users/:_id/exercises', async (req, res, next) => {
   const { _id } = req.params;
   const { description, duration, date } = req.body;
-  const _date = new Date(date).toDateString();
+  const _date = date ? new Date(date).toDateString() : new Date().toDateString();
 
   if(!_id){
    next({ message: 'User id no found' });
