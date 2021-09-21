@@ -21,7 +21,8 @@ const exercisesSchema = new Schema({
   user: [{ type: Schema.Types.ObjectId, ref: 'User' }],
   description: { type: String, required: true },
   duration: { type: Number, required: true },
-  date: { type: Date },
+  search_date: { type: Date },
+  date: { type: String }
 });
 
 const User = mongoose.model('User', userSchema);
@@ -33,7 +34,7 @@ app.use(cors());
 app.use(express.static('public'))
 
 // routes 
-app.post('/api/users', async (req, res) => {
+app.post('/api/users', async (req, res, next) => {
   const { username  } = req.body;
   const  newUser = new User({ username });
   try{
@@ -43,38 +44,38 @@ app.post('/api/users', async (req, res) => {
       username
     });
   }catch(error){
-    return res.json({
-      error: JSON.stringify(error),
-    })
+    next({ message: error.message })
   }
 })
 
-app.get('/api/users', async (req, res) => {
+app.get('/api/users', async (req, res, next) => {
   try {
     const response = await User.find();
-    console.log(response);
     res.json(response);
   } catch (error) {
-    res.json({
-      error: JSON.stringify(error),
-    })
+    next({ message: error.message })
   }
 })  
 
-app.post('/api/users/:_id/exercises', async (req, res) => {
+app.post('/api/users/:_id/exercises', async (req, res, next) => {
   const { _id } = req.params;
   const { description, duration, date } = req.body;
   const _date = new Date(date).toDateString();
 
   if(!_id){
-   throw new Error('user id no found.');
+   next({ message: 'User id no found' });
   }
 
   let user = await User.findById(_id).exec();
 
+  if(!user){
+    next({ message: 'User no found' });
+  }
+
   const newExercises = new Exercises({
     description,
     duration,
+    search_date: _date,
     date: _date,
     user: user.id,
   })
@@ -97,7 +98,7 @@ app.post('/api/users/:_id/exercises', async (req, res) => {
 
 
 
-app.get('/api/users/:_id/logs', async (req, res) => {
+app.get('/api/users/:_id/logs', async (req, res, next) => {
   const { limit, from, to } = req.query;
   const { _id } = req.params;
 
@@ -108,10 +109,12 @@ app.get('/api/users/:_id/logs', async (req, res) => {
       limit: Number(limit), 
     }
   }
-  
-  console.log(options);
 
   const user = await User.findById(_id).exec();
+
+  if(!user){
+    next({ message: 'User no found' });
+  }
 
   const find = {
     user: user.id,
@@ -119,7 +122,7 @@ app.get('/api/users/:_id/logs', async (req, res) => {
 
   if(from && to){
     Object.assign(find, {
-      date:{
+      search_date:{
         $gte: new Date(from),
         $lte: new Date(to),
       }
@@ -135,8 +138,15 @@ app.get('/api/users/:_id/logs', async (req, res) => {
   const data = {
     _id: user._id,
     username: user.username,
-    count: 0,
-    logs
+    count: logs.length,
+    logs: logs || [],
+  }
+
+  if(from && to){
+    Object.assign(data, {
+      from: new Date(from).toDateString(),
+      to: new Date(to).toDateString(),
+    })
   }
 
   res.json(data)
