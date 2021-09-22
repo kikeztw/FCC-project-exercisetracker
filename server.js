@@ -61,6 +61,7 @@ app.post('/api/users/:_id/exercises', async (req, res, next) => {
   const { _id } = req.params;
   const { description, duration, date } = req.body;
   const _date = date ? new Date(date).toDateString() : new Date().toDateString();
+  const _duration = Number(duration);
 
   if(!_id){
    next({ message: 'User id no found' });
@@ -74,7 +75,7 @@ app.post('/api/users/:_id/exercises', async (req, res, next) => {
 
   const newExercises = new Exercises({
     description,
-    duration,
+    duration: _duration,
     search_date: _date,
     date: _date,
     user: user.id,
@@ -89,7 +90,7 @@ app.post('/api/users/:_id/exercises', async (req, res, next) => {
   
   res.json({
     description,
-    duration,
+    duration: _duration,
     date: _date,
     username: user.username,
     _id: user.id,
@@ -139,7 +140,7 @@ app.get('/api/users/:_id/logs', async (req, res, next) => {
     _id: user._id,
     username: user.username,
     count: logs.length,
-    logs: logs || [],
+    log: logs || [],
   }
 
   if(from && to){
