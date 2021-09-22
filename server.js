@@ -134,13 +134,15 @@ app.get('/api/users/:_id/logs', async (req, res, next) => {
     find, 
     null, 
     options
-  ).select('description date duration -_id').exec();
+  ).select('-_id').exec();
+
+  console.log(logs);
 
   const data = {
     _id: user._id,
     username: user.username,
     count: logs.length,
-    log: logs || [],
+    log: logs.map((e) => ({ duration: e.duration, description: e.description, date: new Date(e.search_date).toDateString() })) || [],
   }
 
   if(from && to){
