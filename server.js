@@ -67,7 +67,12 @@ app.post('/api/users/:_id/exercises', async (req, res, next) => {
    next({ message: 'User id no found' });
   }
 
-  let user = await User.findById(_id).exec();
+  let user
+  try {
+    user  = await User.findById(_id).exec();
+  } catch (error) {
+    next({ message: error.message });
+  }
 
   if(!user){
     next({ message: 'User no found' });
@@ -81,12 +86,20 @@ app.post('/api/users/:_id/exercises', async (req, res, next) => {
     user: user.id,
   })
 
-  await newExercises.save();
+  try {
+    await newExercises.save();
+  } catch (error) {
+    next({ message: error.message });
+  }
 
   const logs = user.logs || [];
   user.logs = [...logs, newExercises._id];
 
-  await user.save();
+  try {
+    await user.save();
+  } catch (error) {
+    next({ message: error.message });
+  }
   
   res.json({
     description,
@@ -111,7 +124,12 @@ app.get('/api/users/:_id/logs', async (req, res, next) => {
     }
   }
 
-  const user = await User.findById(_id).exec();
+  let user;
+  try {
+   user = await User.findById(_id).exec();
+  } catch (error) {
+    next({ message: error.message });
+  }
 
   if(!user){
     next({ message: 'User no found' });
@@ -130,11 +148,16 @@ app.get('/api/users/:_id/logs', async (req, res, next) => {
     })
   }
 
-  const logs = await Exercises.find(
-    find, 
-    null, 
-    options
-  ).select('-_id').exec();
+  let logs 
+  try {
+    logs = await Exercises.find(
+      find, 
+      null, 
+      options
+    ).select('-_id').exec();
+  } catch (error) {
+    next({ message: error.message });
+  }
 
   const data = {
     _id: user._id,
